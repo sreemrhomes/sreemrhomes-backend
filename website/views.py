@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Video, Enquiry, ContactMessage, Project, Block
+from .models import Video, Enquiry, ContactMessage, Project, Blogs
 import json
 
 
@@ -97,17 +97,17 @@ def project_list(request):
 
     return JsonResponse(projects, safe=False)
 
-def block_list(request):
-    block = []
+def blogs_list(request):
+    blogs = []
 
-    for block in Block.objects.all():
+    for blog in Blogs.objects.all():
 
-        block.append({
-            "id": block.id,
-            "name": block.name,
-            "author": block.author,
-            "description": block.description,
-            "image": request.build_absolute_uri(block.image.url),
+        blogs.append({
+            "id": blog.id,
+            "name": blog.name,
+            "author": blog.author,
+            "description": blog.description,
+            "image": request.build_absolute_uri(blog.image.url),
         })
 
-    return JsonResponse(block, safe=False)
+    return JsonResponse(blogs, safe=False)
