@@ -79,18 +79,16 @@ def create_contact(request):
 
 
 def project_list(request):
-
     projects = []
 
     for project in Project.objects.all():
-
         projects.append({
             "id": project.id,
             "title": project.title,
             "location": project.location,
             "description": project.description,
-            "image": request.build_absolute_uri(project.image.url),
-            "brouchure": request.build_absolute_uri(project.brouchure.url),
+            "image": request.build_absolute_uri(project.image.url) if project.image else None,
+            "brouchure": request.build_absolute_uri(project.brouchure.url) if project.brouchure else None,
             "badge": project.badge,
             "bhk": project.bhk,
         })
