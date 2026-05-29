@@ -1,0 +1,19 @@
+<h1>SREEMR HOMES VIDEOS</h1>
+
+{% for video in videos %}
+
+<div style="margin-bottom:40px;">
+
+    <h2>{{ video.title }}</h2>
+
+    <iframe
+        width="560"
+        height="315"
+        src="https://www.youtube.com/embed/{{ video.youtube_url|slice:'32:' }}"
+        frameborder="0"
+        allowfullscreen>
+    </iframe>
+
+</div>
+
+{% endfor %}
