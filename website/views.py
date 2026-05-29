@@ -97,7 +97,7 @@ def project_list(request):
 
     return JsonResponse(projects, safe=False)
 
-def blogs_list(request):
+def block_list(request):
     blogs = []
 
     for blog in Blogs.objects.all():
