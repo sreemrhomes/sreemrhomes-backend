@@ -54,11 +54,11 @@ class Project(models.Model):
     def __str__(self):
         return self.title
     
-class Block(models.Model):
+class Blogs(models.Model):
     name = models.CharField(max_length=100)
     author = models.CharField(max_length=100)
     description = models.TextField()
-    image = models.ImageField(upload_to="blocks/")
+    image = models.ImageField(upload_to="blogs/")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
