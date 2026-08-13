@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -128,6 +129,26 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Razorpay
+# SECURITY WARNING: in production, set these as real environment variables
+# (e.g. on PythonAnywhere: Web tab > WSGI configuration file, or a .env loader)
+# instead of relying on the placeholder defaults below.
+RAZORPAY_KEY_ID = "rzp_test_SrbnDySEFUojqd"
+RAZORPAY_KEY_SECRET = "HVYww1cjpiuk7CeqJW0UFD10"
+
+# Booking fee (in INR) charged to reserve an ad video shoot slot.
+SHOOT_BOOKING_AMOUNT_INR = 1999
+
+# Email settings (default values; dynamic configuration managed via EmailConfiguration model in Django admin).
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+DEFAULT_FROM_EMAIL = "Sreemr Homes <noreply@sreemrhomes.com>"
+
+
 JAZZMIN_SETTINGS = {
     # title of the window (Will default to current_admin_site.site_title if absent or None)
     "site_title": "SREEMR HOMES Admin",
@@ -220,6 +241,7 @@ JAZZMIN_SETTINGS = {
     "website.enquiry": "fas fa-clipboard-list",
     "website.video": "fas fa-video",
     "website.block": "fas fa-th-large",
+    "website.shootbooking": "fas fa-video",
 },
     # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",

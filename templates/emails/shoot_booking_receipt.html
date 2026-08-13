@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Receipt</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F4EFEA; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4EFEA; padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#FDFBF9; border-radius:12px; overflow:hidden; border:1px solid #E8D18C;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#4c2a30; padding:28px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="color:#FDFBF9; font-size:22px; font-weight:bold;">
+                    {{ company_name }}
+                  </td>
+                  <td align="right" style="color:#D4AF37; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">
+                    Payment Receipt
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Success banner -->
+          <tr>
+            <td style="padding:28px 32px 8px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EAF7EE; border-radius:8px;">
+                <tr>
+                  <td style="padding:16px 20px; color:#1A7A3C; font-size:15px; font-weight:bold;">
+                    &#10003; Payment successful &mdash; your ad video shoot slot is booked!
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Intro -->
+          <tr>
+            <td style="padding:16px 32px 0 32px; color:#1A0D10; font-size:15px; line-height:1.6;">
+              Hi {{ booking.full_name }},
+              <br /><br />
+              Thank you for booking a professional ad video shoot with {{ company_name }}. This email confirms
+              your payment and reserves the slot below. Our team will contact you shortly to finalize the
+              shoot details.
+            </td>
+          </tr>
+
+          <!-- Booking details -->
+          <tr>
+            <td style="padding:24px 32px 8px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E8D18C; border-radius:8px;">
+                <tr>
+                  <td colspan="2" style="background-color:#F4EFEA; padding:12px 18px; font-size:13px; font-weight:bold; color:#7A6B65; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #E8D18C;">
+                    Booking Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65; width:45%;">Booking ID</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10; font-weight:bold;">#{{ booking.id }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Property</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.property_name }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Shoot Address</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.shoot_address }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Preferred Date</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.preferred_date }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Time Slot</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ time_slot_label }}</td>
+                </tr>
+                {% if booking.notes %}
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Notes</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.notes }}</td>
+                </tr>
+                {% endif %}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Contact details -->
+          <tr>
+            <td style="padding:16px 32px 8px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E8D18C; border-radius:8px;">
+                <tr>
+                  <td colspan="2" style="background-color:#F4EFEA; padding:12px 18px; font-size:13px; font-weight:bold; color:#7A6B65; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #E8D18C;">
+                    Contact Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65; width:45%;">Name</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.full_name }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Phone</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.phone }}</td>
+                </tr>
+                {% if booking.email %}
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Email</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.email }}</td>
+                </tr>
+                {% endif %}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Payment details -->
+          <tr>
+            <td style="padding:16px 32px 8px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E8D18C; border-radius:8px;">
+                <tr>
+                  <td colspan="2" style="background-color:#F4EFEA; padding:12px 18px; font-size:13px; font-weight:bold; color:#7A6B65; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #E8D18C;">
+                    Payment Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65; width:45%;">Amount Paid</td>
+                  <td style="padding:10px 18px; font-size:16px; color:#1A0D10; font-weight:bold;">Rs. {{ booking.amount }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Payment ID</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.razorpay_payment_id }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Order ID</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.razorpay_order_id }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Status</td>
+                  <td style="padding:10px 18px; font-size:14px;">
+                    <span style="background-color:#EAF7EE; color:#1A7A3C; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:bold; text-transform:uppercase;">Paid</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 18px; font-size:14px; color:#7A6B65;">Paid On</td>
+                  <td style="padding:10px 18px; font-size:14px; color:#1A0D10;">{{ booking.updated_at }}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px 32px 32px; color:#7A6B65; font-size:12px; line-height:1.6;">
+              This is an automated payment receipt for your ad video shoot booking with {{ company_name }}.
+              If you have any questions about your booking, simply reply to this email or contact our team.
+              <br /><br />
+              &copy; {{ company_name }}
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
