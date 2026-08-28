@@ -13,18 +13,47 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Loads sreemr-home-django/.env (never committed — see .env.example) so both
+# local development and production read Supabase + R2 credentials the same way.
+load_dotenv(BASE_DIR / ".env")
+
+
+def require_env(*names):
+    """Fetches required env vars, raising one clear error listing everything missing."""
+    values = {name: os.environ.get(name) for name in names}
+    missing = [name for name, value in values.items() if not value]
+    if missing:
+        raise ImproperlyConfigured(
+            f"Missing required environment variable(s): {', '.join(missing)}. "
+            f"Copy .env.example to .env in sreemr-home-django/ and fill in your "
+            f"Supabase and Cloudflare R2 credentials."
+        )
+    return values
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-f1xlbs5e@&pr3u1$&!()2ng6z+&)yyqk82gs87xmw*k$=vlk+a'
+# Read from the environment — this file is committed to a public GitHub
+# repo, so a literal key here would be public too. Falls back to the
+# original dev key if unset so nothing breaks locally if .env is missing it.
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-f1xlbs5e@&pr3u1$&!()2ng6z+&)yyqk82gs87xmw*k$=vlk+a"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Defaults to OFF. Set DEBUG=True in your local .env for development —
+# never on the real production deployment (it leaks stack traces, settings,
+# and this very SECRET_KEY to anyone who triggers an error).
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ["sreemrhomess.pythonanywhere.com","127.0.0.1"]
 
@@ -41,6 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'website',
     'corsheaders',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -74,14 +104,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 
-# Database
+# Database — Supabase (managed Postgres)
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+#
+# DATABASE_URL comes from your Supabase project: Project Settings -> Database
+# -> Connection string -> URI. Prefer the direct connection or the "Session
+# pooler" (port 5432) over the "Transaction pooler" (port 6543) — the
+# transaction pooler doesn't support the persistent connections / advisory
+# locks Django's migrations rely on.
+_db_env = require_env("DATABASE_URL")
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.parse(
+        _db_env["DATABASE_URL"],
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
 
 
@@ -125,19 +163,61 @@ STATICFILES_DIRS = [
 ]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 CORS_ALLOW_ALL_ORIGINS = True
 
+# ---------------------------------------------------------------------------
+# Cloudflare R2 (S3-compatible) for media (Project/Blogs images, brochures)
+# ---------------------------------------------------------------------------
+# All four values come from the Cloudflare dashboard:
+#   R2 -> Manage API tokens -> create a token scoped to your bucket (Object
+#   Read & Write) for R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY;
+#   R2 -> your bucket -> Settings -> S3 API -> Endpoint for R2_ENDPOINT_URL;
+#   R2 -> your bucket -> Settings -> Public access for R2_PUBLIC_DOMAIN
+#   (either the bucket's pub-xxxx.r2.dev host, or a custom domain you've
+#   connected — either way, without the "https://" prefix).
+#
+# These are read WITHOUT require_env() on purpose: unlike the database, media
+# storage isn't touched by every command (migrate, createsuperuser, shell,
+# dumpdata all work fine with no R2 config at all). The friendly "which
+# variable is missing" error instead comes from website.storage.R2MediaStorage,
+# raised only the first time something actually tries to read/write a file.
+AWS_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL = os.environ.get("R2_ENDPOINT_URL")
+AWS_S3_CUSTOM_DOMAIN = os.environ.get("R2_PUBLIC_DOMAIN")
+AWS_S3_REGION_NAME = "auto"
+AWS_S3_ADDRESSING_STYLE = "virtual"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False  # public bucket: plain URLs, no signed query params
+
+STORAGES = {
+    "default": {
+        "BACKEND": "website.storage.R2MediaStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/" if AWS_S3_CUSTOM_DOMAIN else "/media/"
+
 # Razorpay
-# SECURITY WARNING: in production, set these as real environment variables
-# (e.g. on PythonAnywhere: Web tab > WSGI configuration file, or a .env loader)
-# instead of relying on the placeholder defaults below.
-RAZORPAY_KEY_ID = "rzp_test_SrbnDySEFUojqd"
-RAZORPAY_KEY_SECRET = "HVYww1cjpiuk7CeqJW0UFD10"
+# Read from the environment (.env locally; real env vars / WSGI config in
+# production) instead of being hardcoded here — this file is committed to a
+# public GitHub repo, so a literal key here would be public too. Booking
+# creation will fail with a clear Razorpay auth error if these are unset;
+# every other command (migrate, createsuperuser, etc.) is unaffected.
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
 # Booking fee (in INR) charged to reserve an ad video shoot slot.
 SHOOT_BOOKING_AMOUNT_INR = 1999
+
+# Booking fee (in INR) charged to reserve a site visit slot.
+SITE_VISIT_BOOKING_AMOUNT_INR = 1000
 
 # Email settings (default values; dynamic configuration managed via EmailConfiguration model in Django admin).
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -242,6 +322,8 @@ JAZZMIN_SETTINGS = {
     "website.video": "fas fa-video",
     "website.block": "fas fa-th-large",
     "website.shootbooking": "fas fa-video",
+    "website.sitevisitbooking": "fas fa-map-marker-alt",
+    "website.bookingpricing": "fas fa-rupee-sign",
 },
     # Icons that are used when one is not manually specified
     "default_icon_parents": "fas fa-chevron-circle-right",

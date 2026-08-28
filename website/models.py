@@ -1,5 +1,10 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.db import models
 from django.conf import settings
+
+
+TWO_PLACES = Decimal("0.01")
 
 
 class Video(models.Model):
@@ -66,6 +71,76 @@ class Blogs(models.Model):
         return self.name
 
 
+class BookingPricing(models.Model):
+    """Admin-editable price + GST for each booking service (site visit / ad shoot).
+
+    Exactly one active row per booking_type is the live price charged on the
+    next booking of that type. Changing it here takes effect immediately —
+    no code or settings.py changes needed. Past bookings keep their own
+    snapshot of base/GST/total at the time they were paid (see
+    ShootBooking/SiteVisitBooking below), so editing a price never rewrites
+    old invoices.
+    """
+
+    BOOKING_TYPE_CHOICES = [
+        ("site_visit", "Site Visit Booking"),
+        ("shoot", "Ad Video Shoot Booking"),
+    ]
+
+    booking_type = models.CharField(max_length=20, choices=BOOKING_TYPE_CHOICES, unique=True)
+    base_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Price in INR, before GST."
+    )
+    gst_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("18.00"),
+        help_text="GST rate applied on top of the base amount, e.g. 18.00 for 18%.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Uncheck to stop charging for this service (bookings will be blocked).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Booking Pricing"
+        verbose_name_plural = "Booking Pricing"
+        ordering = ["booking_type"]
+
+    def __str__(self):
+        return f"{self.get_booking_type_display()} — Rs. {self.total_amount} (incl. {self.gst_percentage}% GST)"
+
+    @property
+    def gst_amount(self):
+        return (self.base_amount * self.gst_percentage / Decimal("100")).quantize(
+            TWO_PLACES, rounding=ROUND_HALF_UP
+        )
+
+    @property
+    def total_amount(self):
+        return (self.base_amount + self.gst_amount).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+
+
+def get_booking_pricing(booking_type, fallback_amount):
+    """Returns (base_amount, gst_percentage, gst_amount, total_amount) as Decimals.
+
+    Looks up the active BookingPricing row for booking_type. If none exists
+    yet (e.g. right after this feature is deployed, before the admin has
+    added pricing), falls back to a flat fallback_amount with 0% GST so the
+    booking flow never breaks.
+    """
+    pricing = BookingPricing.objects.filter(booking_type=booking_type, is_active=True).first()
+
+    if pricing:
+        return pricing.base_amount, pricing.gst_percentage, pricing.gst_amount, pricing.total_amount
+
+    base = Decimal(str(fallback_amount)).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    return base, Decimal("0.00"), Decimal("0.00"), base
+
+
 class ShootBooking(models.Model):
     """A booking for a professional ad video shoot at a property, paid for via Razorpay."""
 
@@ -93,7 +168,15 @@ class ShootBooking(models.Model):
     time_slot = models.CharField(max_length=50, choices=TIME_SLOT_CHOICES)
     notes = models.TextField(blank=True, null=True)
 
-    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Pricing snapshot at the time this booking was created (from the active
+    # BookingPricing row) — kept even if the admin changes prices later, so
+    # this booking's own receipt/invoice never changes retroactively.
+    base_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, help_text="Total amount charged (base + GST)."
+    )
 
     razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
     razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True)
@@ -109,6 +192,86 @@ class ShootBooking(models.Model):
 
     def __str__(self):
         return f"{self.property_name} - {self.preferred_date} ({self.get_time_slot_display()})"
+
+
+class SiteVisitBooking(models.Model):
+    """A booking for a physical property site-visit slot, paid for via Razorpay.
+
+    Kept as its own model (separate from ShootBooking) since a site visit and
+    an ad-video shoot are different services with different fields, pricing,
+    and time slots, even though both share the same slot-booking + payment flow.
+    """
+
+    PROPERTY_CATEGORY_CHOICES = [
+        ("flat", "Flat / Apartment"),
+        ("villa", "Villa"),
+    ]
+
+    # Only these two slots are offered by the frontend's restricted slot picker.
+    TIME_SLOT_CHOICES = [
+        ("11:00-13:00", "11:00 AM - 1:00 PM"),
+        ("14:00-16:00", "2:00 PM - 4:00 PM"),
+    ]
+
+    STATUS_CHOICES = [
+        ("pending_payment", "Pending Payment"),
+        ("paid", "Paid"),
+        ("failed", "Failed"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    # Contact
+    full_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True, null=True)
+
+    # Community / location
+    community = models.CharField(max_length=200)
+    location = models.CharField(max_length=200)
+    property_name = models.CharField(max_length=250, blank=True)
+    site_address = models.CharField(max_length=300, blank=True)
+
+    # Property category & specifications
+    property_category = models.CharField(max_length=10, choices=PROPERTY_CATEGORY_CHOICES, default="flat")
+    bhk_type = models.CharField(max_length=50, blank=True)
+    structure = models.CharField(max_length=50, blank=True)
+    floor_number = models.CharField(max_length=50, blank=True)
+    total_floors = models.CharField(max_length=50, blank=True)
+    size_sqft = models.CharField(max_length=50, blank=True)
+    facing = models.CharField(max_length=20, blank=True)
+    furnishing = models.CharField(max_length=30, blank=True)
+    parking = models.CharField(max_length=30, blank=True)
+    villa_number = models.CharField(max_length=50, blank=True)
+
+    # Slot
+    preferred_date = models.DateField()
+    time_slot = models.CharField(max_length=50, choices=TIME_SLOT_CHOICES)
+    notes = models.TextField(blank=True, null=True)
+
+    # Pricing snapshot at the time this booking was created (from the active
+    # BookingPricing row) — kept even if the admin changes prices later, so
+    # this booking's own receipt/invoice never changes retroactively.
+    base_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, help_text="Total amount charged (base + GST)."
+    )
+
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_signature = models.CharField(max_length=255, blank=True, null=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending_payment")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.community} - {self.preferred_date} ({self.get_time_slot_display()})"
 
 
 class EmailConfiguration(models.Model):
