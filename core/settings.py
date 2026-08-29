@@ -55,7 +55,7 @@ SECRET_KEY = os.environ.get(
 # and this very SECRET_KEY to anyone who triggers an error).
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["sreemrhomess.pythonanywhere.com","127.0.0.1"]
+ALLOWED_HOSTS = ["sreemrhomess.pythonanywhere.com","127.0.0.1", "api.sreemrehomes.com"]
 
 
 # Application definition
