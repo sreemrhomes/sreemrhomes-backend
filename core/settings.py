@@ -210,8 +210,8 @@ MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/" if AWS_S3_CUSTOM_DOMAIN else "/me
 # public GitHub repo, so a literal key here would be public too. Booking
 # creation will fail with a clear Razorpay auth error if these are unset;
 # every other command (migrate, createsuperuser, etc.) is unaffected.
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
 
 # Booking fee (in INR) charged to reserve an ad video shoot slot.
 SHOOT_BOOKING_AMOUNT_INR = 1999
